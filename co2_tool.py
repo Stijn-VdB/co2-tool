@@ -15,6 +15,8 @@ with st.form("invoer_form"):
     naam = st.text_input("Naam")
     wagen = st.selectbox("Wagentype", df["Type activiteit"].unique())
     km = st.number_input("Aantal kilometers", min_value=0, step=1)
+    
+    # ✅ Hier staat de submit-knop
     submit = st.form_submit_button("Toevoegen")
 
     if submit and naam and km > 0:
@@ -39,3 +41,5 @@ if st.session_state["resultaten"]:
 
     totaal = resultaten_df["CO2 (kg)"].sum()
     st.success(f"🌍 Totale CO₂-uitstoot: {totaal:.2f} kg")
+
+
