@@ -110,8 +110,6 @@ if st.session_state["resultaten"]:
 st.altair_chart(chart, use_container_width=True)
 
 
-else:
-    st.info("🚘 Voeg een rit toe om resultaten te zien.")
 
 
 
