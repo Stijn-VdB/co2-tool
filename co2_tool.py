@@ -100,7 +100,6 @@ if st.session_state["resultaten"]:
         st.metric("Gemiddelde per rit", f"{gemiddelde:.2f} kg")
 
     # --- CHART ---
-    st.subheader("📈 CO₂ per persoon")
     if not resultaten_df.empty:
     # Aggregate CO₂ per wagen type
         pie_data = resultaten_df.groupby("Wagen", as_index=False)["CO2 (kg)"].sum()
@@ -119,6 +118,7 @@ if st.session_state["resultaten"]:
 
     else:
         st.info("🚘 Voeg een rit toe om resultaten te zien.")
+
 
 
 
