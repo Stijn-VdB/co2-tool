@@ -106,7 +106,7 @@ if st.session_state["resultaten"]:
     y="CO2 (kg)",
     color="Wagen",
     tooltip=["Naam", "Wagen", "Kilometers", "CO2 (kg)"]
-)
+).properties(width=600)
 st.altair_chart(chart, use_container_width=True)
 
 
