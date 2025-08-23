@@ -5,7 +5,11 @@ import altair as alt
 st.set_page_config(page_title="CO₂-uitstoot Berekening", page_icon="🚗", layout="wide")
 
 # --- Load Data ---
-uploaded_file = st.sidebar.file_uploader("Upload Excel bestand", type=["xlsx"])
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/2422/2422056.png", width=80)
+    st.title("⚙️ Instellingen")
+    st.info("Upload je eigen Excel-bestand of gebruik de standaard data.")
+    uploaded_file = st.file_uploader("Upload Excel bestand", type=["xlsx"])
 if uploaded_file:
     df = pd.read_excel(uploaded_file, sheet_name="Blad1")
 else:
@@ -93,6 +97,7 @@ with tab1:
             st.altair_chart(pie_chart, use_container_width=True)
     else:
         st.info("🚘 Voeg een rit toe om resultaten te zien.")
+
 
 
 
