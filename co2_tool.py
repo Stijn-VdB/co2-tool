@@ -103,22 +103,23 @@ if st.session_state["resultaten"]:
     st.subheader("📈 CO₂ per persoon")
     if not resultaten_df.empty:
     # Aggregate CO₂ per wagen type
-    pie_data = resultaten_df.groupby("Wagen", as_index=False)["CO2 (kg)"].sum()
-    pie_data = pie_data.rename(columns={"CO2 (kg)": "CO2_kg"})
-    pie_data["Percentage"] = (pie_data["CO2_kg"] / pie_data["CO2_kg"].sum()) * 100
+        pie_data = resultaten_df.groupby("Wagen", as_index=False)["CO2 (kg)"].sum()
+        pie_data = pie_data.rename(columns={"CO2 (kg)": "CO2_kg"})
+        pie_data["Percentage"] = (pie_data["CO2_kg"] / pie_data["CO2_kg"].sum()) * 100
 
     # Create pie chart
-    pie_chart = alt.Chart(pie_data).mark_arc().encode(
-        theta="CO2_kg:Q",
-        color="Wagen:N",
-        tooltip=["Wagen", alt.Tooltip("CO2_kg:Q", format=".2f"), alt.Tooltip("Percentage:Q", format=".1f")]
-    ).properties(title="CO₂-verdeling per Wagentype")
+        pie_chart = alt.Chart(pie_data).mark_arc().encode(
+            theta="CO2_kg:Q",
+            color="Wagen:N",
+            tooltip=["Wagen", alt.Tooltip("CO2_kg:Q", format=".2f"), alt.Tooltip("Percentage:Q", format=".1f")]
+        ).properties(title="CO₂-verdeling per Wagentype")
 
-    st.subheader("🥧 CO₂-verdeling per wagentype")
-    st.altair_chart(pie_chart, use_container_width=True)
+        st.subheader("🥧 CO₂-verdeling per wagentype")
+        st.altair_chart(pie_chart, use_container_width=True)
 
     else:
         st.info("🚘 Voeg een rit toe om resultaten te zien.")
+
 
 
 
