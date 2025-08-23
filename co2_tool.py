@@ -102,15 +102,16 @@ if st.session_state["resultaten"]:
     # --- CHART ---
     st.subheader("📈 CO₂ per persoon")
     if not resultaten_df.empty:
-    chart = alt.Chart(resultaten_df).mark_bar().encode(
-        x="Naam:N",
-        y=alt.Y("CO2 (kg):Q", title="CO₂ (kg)"),
-        color="Wagen:N",
-        tooltip=["Naam", "Wagen", "Kilometers", "CO2 (kg)"]
-    )
-    st.altair_chart(chart, use_container_width=True)
+        chart = alt.Chart(resultaten_df).mark_bar().encode(
+            x="Naam:N",
+            y=alt.Y("CO2 (kg):Q", title="CO₂ (kg)"),
+            color="Wagen:N",
+            tooltip=["Naam", "Wagen", "Kilometers", "CO2 (kg)"]
+        )
+        st.altair_chart(chart, use_container_width=True)
     else:
-    st.info("🚘 Voeg een rit toe om resultaten te zien.")
+        st.info("🚘 Voeg een rit toe om resultaten te zien.")
+
 
 
 
