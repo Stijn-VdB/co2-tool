@@ -199,15 +199,6 @@ if not werf_df.empty:
     st.altair_chart(pie_chart_werf, use_container_width=True)
 
 
-    # Optioneel: grafiek over dagen
-    grafiek_df = werf_df.groupby("Datum", as_index=False)["CO2 (kg)"].sum()
-    chart = alt.Chart(grafiek_df).mark_bar().encode(
-        x="Datum:T",
-        y="CO2 (kg):Q",
-        tooltip=["Datum", "CO2 (kg)"]
-    ).properties(title="CO₂ per dag")
-    st.altair_chart(chart, use_container_width=True)
-
 
 
 
