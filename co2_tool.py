@@ -18,6 +18,9 @@ with st.sidebar:
 # --- Load Data voor thema's ---
 if "data" not in st.session_state:
     st.session_state["data"] = {}
+# Initialize dictionary for multi-thema
+if "data" not in st.session_state or not isinstance(st.session_state["data"], dict):
+    st.session_state["data"] = {}
 
 for thema in THEMAS:
     if uploaded_file:
@@ -210,6 +213,7 @@ if not werf_df.empty:
     ).properties(title="🥧 CO₂-verdeling per wagentype (gehele werf)")
 
     st.altair_chart(pie_chart_werf, use_container_width=True)
+
 
 
 
