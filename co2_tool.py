@@ -5,22 +5,29 @@ from datetime import datetime, timedelta
 
 st.set_page_config(page_title="CO₂-uitstoot Berekening", page_icon="🚗", layout="wide")
 
-# --- Load Data ---
+# --- Config ---
+THEMAS = ["Woon-werkverkeer", "Materiaaltransport", "Werfmachines"]
+
+# --- Sidebar: Upload bestand ---
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2422/2422056.png", width=80)
     st.title("⚙️ Instellingen")
     st.info("Upload je eigen Excel-bestand of gebruik de standaard data.")
     uploaded_file = st.file_uploader("Upload Excel bestand", type=["xlsx"])
-if uploaded_file:
-    df = pd.read_excel(uploaded_file, sheet_name="Blad1")
-else:
-    df = pd.read_excel("Tool.xlsx", sheet_name="Blad1")
 
-df.columns = df.columns.str.strip()
-
-# Store data in session state for editing
+# --- Load Data voor thema's ---
 if "data" not in st.session_state:
-    st.session_state["data"] = df.copy()
+    st.session_state["data"] = {}
+
+for thema in THEMAS:
+    if uploaded_file:
+        # Voor nu gebruik hetzelfde blad, later kun je per thema andere sheets of bestanden gebruiken
+        df = pd.read_excel(uploaded_file, sheet_name="Blad1")
+    else:
+        df = pd.read_excel("Tool.xlsx", sheet_name="Blad1")
+
+    df.columns = df.columns.str.strip()
+    st.session_state["data"][thema] = df.copy()
 
 # Initialize session state for werven and resultaten
 if "werven" not in st.session_state:
@@ -35,9 +42,10 @@ tab_data, tab_werven = st.tabs(["📂 Data", "🏗️ Werven"])
 # 📂 TAB DATA
 # =============================
 with tab_data:
-    st.subheader("📂 Data uit Excel (Bewerkbaar)")
-    edited_df = st.data_editor(st.session_state["data"], num_rows="dynamic", use_container_width=True)
-    st.session_state["data"] = edited_df  # Save edits
+    st.subheader("📂 Data per thema (Bewerkbaar)")
+    selected_thema_data = st.selectbox("Kies thema voor data-editor", THEMAS)
+    edited_df = st.data_editor(st.session_state["data"][selected_thema_data], num_rows="dynamic", use_container_width=True)
+    st.session_state["data"][selected_thema_data] = edited_df  # Save edits
 
 # =============================
 # 🏗️ TAB WERVEN
@@ -77,7 +85,7 @@ with tab_werven:
     # --- Selecteer werf om berekeningen te doen ---
     if st.session_state["werven"]:
         st.markdown("---")
-        st.subheader("📅 Selecteer Werf & Dag")
+        st.subheader("📅 Selecteer Werf, Thema & Dag")
         werf_namen = [w["Naam"] for w in st.session_state["werven"]]
         selected_werf = st.selectbox("Kies een werf", werf_namen)
 
@@ -85,19 +93,22 @@ with tab_werven:
         start = werf_info["Begin"]
         einde = werf_info["Einde"]
 
+        # Thema kiezen
+        selected_thema = st.selectbox("Kies een thema", THEMAS)
+
         # Genereer datums
         dagen = pd.date_range(start=start, end=einde).strftime("%Y-%m-%d").tolist()
         selected_dag = st.selectbox("Kies een dag", dagen)
 
-        # --- Input voor berekening (zoals origineel tab1) ---
-        st.markdown("### 🌍 Berekening voor geselecteerde dag")
-        current_df = st.session_state["data"]
+        # --- Input voor berekening ---
+        st.markdown(f"### 🌍 Berekening ({selected_thema}) voor {selected_dag}")
+        current_df = st.session_state["data"][selected_thema]
 
         col1, col2, col3 = st.columns(3)
         with col1:
             naam = st.text_input("👤 Naam")
         with col2:
-            wagen = st.selectbox("🚘 Wagentype", current_df["Type activiteit"].unique())
+            wagen = st.selectbox("🚘 Type activiteit", current_df["Type activiteit"].unique())
         with col3:
             km = st.number_input("📏 Aantal kilometers", min_value=0, step=1)
 
@@ -110,14 +121,16 @@ with tab_werven:
 
                 st.session_state["resultaten"].append({
                     "Werf": selected_werf,
+                    "Thema": selected_thema,
                     "Datum": selected_dag,
                     "Naam": naam,
-                    "Wagen": wagen,
+                    "Type activiteit": wagen,
                     "Kilometers": km,
                     "CO2 (kg)": round(co2, 2)
                 })
             else:
                 st.warning("⚠️ Vul alle velden correct in.")
+
 
         # --- Resultaten voor deze dag ---
 dag_df = pd.DataFrame([r for r in st.session_state["resultaten"] if r["Werf"] == selected_werf and r["Datum"] == selected_dag])
@@ -197,6 +210,7 @@ if not werf_df.empty:
     ).properties(title="🥧 CO₂-verdeling per wagentype (gehele werf)")
 
     st.altair_chart(pie_chart_werf, use_container_width=True)
+
 
 
 
