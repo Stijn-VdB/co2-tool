@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+from datetime import datetime, timedelta
 
 st.set_page_config(page_title="CO₂-uitstoot Berekening", page_icon="🚗", layout="wide")
 
@@ -21,82 +22,145 @@ df.columns = df.columns.str.strip()
 if "data" not in st.session_state:
     st.session_state["data"] = df.copy()
 
-# --- Tabs ---
-tab1, tab2 = st.tabs(["📐 Berekening", "📂 Data"])
+# Initialize session state for werven and resultaten
+if "werven" not in st.session_state:
+    st.session_state["werven"] = []
+if "resultaten" not in st.session_state:
+    st.session_state["resultaten"] = []
 
-with tab2:
+# --- Tabs ---
+tab_data, tab_werven = st.tabs(["📂 Data", "🏗️ Werven"])
+
+# =============================
+# 📂 TAB DATA
+# =============================
+with tab_data:
     st.subheader("📂 Data uit Excel (Bewerkbaar)")
     edited_df = st.data_editor(st.session_state["data"], num_rows="dynamic", use_container_width=True)
     st.session_state["data"] = edited_df  # Save edits
 
-with tab1:
-    st.title("🌍 CO₂-Tracker")
-    st.markdown("Bereken eenvoudig de CO₂-uitstoot van jouw ritten.")
+# =============================
+# 🏗️ TAB WERVEN
+# =============================
+with tab_werven:
+    st.title("🏗️ Werven Beheer")
 
-    if "resultaten" not in st.session_state:
-        st.session_state["resultaten"] = []
-
-    # Use the edited data for calculations
-    current_df = st.session_state["data"]
-
-    # --- Input ---
-    col1, col2, col3 = st.columns(3)
+    # --- Nieuwe werf toevoegen ---
+    st.subheader("➕ Nieuwe Werf")
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        naam = st.text_input("👤 Naam")
+        werf_naam = st.text_input("Naam werf")
     with col2:
-        wagen = st.selectbox("🚘 Wagentype", current_df["Type activiteit"].unique())
+        start_datum = st.date_input("Begin datum")
     with col3:
-        km = st.number_input("📏 Aantal kilometers", min_value=0, step=1)
+        eind_datum = st.date_input("Eind datum")
+    with col4:
+        if st.button("✅ Werf toevoegen"):
+            if werf_naam and start_datum <= eind_datum:
+                st.session_state["werven"].append({
+                    "Naam": werf_naam,
+                    "Begin": start_datum,
+                    "Einde": eind_datum
+                })
+            else:
+                st.warning("⚠️ Vul een geldige naam en datumbereik in.")
 
-    if st.button("➕ Toevoegen"):
-        if naam and km > 0:
-            row = current_df[current_df["Type activiteit"] == wagen].iloc[0]
-            verbruik = row["Verbruik (liter of kWh / 100km)"]
-            ef = row["EF (kg CO2/eenheid)"]
-            co2 = ef * (verbruik / 100) * km
-
-            st.session_state["resultaten"].append({
-                "Naam": naam,
-                "Wagen": wagen,
-                "Kilometers": km,
-                "CO2 (kg)": round(co2, 2)
-            })
-        else:
-            st.warning("⚠️ Vul alle velden correct in.")
-
-    if st.session_state["resultaten"]:
-        resultaten_df = pd.DataFrame(st.session_state["resultaten"])
-        st.subheader("📊 Resultaten")
-        st.dataframe(resultaten_df, use_container_width=True)
-
-        totaal = resultaten_df["CO2 (kg)"].sum()
-        col4, col5 = st.columns(2)
-        with col4:
-            st.metric("Totale CO₂-uitstoot", f"{totaal:.2f} kg")
-        with col5:
-            gemiddelde = resultaten_df["CO2 (kg)"].mean()
-            st.metric("Gemiddelde per rit", f"{gemiddelde:.2f} kg")
-
-        # --- PIE CHART ---
-        if not resultaten_df.empty:
-            pie_data = resultaten_df.groupby("Wagen", as_index=False)["CO2 (kg)"].sum()
-            pie_data = pie_data.rename(columns={"CO2 (kg)": "CO2_kg"})
-            pie_data["Percentage"] = (pie_data["CO2_kg"] / pie_data["CO2_kg"].sum()) * 100
-
-            pie_chart = alt.Chart(pie_data).mark_arc().encode(
-                theta="CO2_kg:Q",
-                color="Wagen:N",
-                tooltip=[
-                    "Wagen",
-                    alt.Tooltip("CO2_kg:Q", format=".2f"),
-                    alt.Tooltip("Percentage:Q", format=".1f")
-                ]
-            ).properties(title="CO₂-verdeling per Wagentype")
-
-            st.subheader("🥧 CO₂-verdeling per wagentype")
-            st.altair_chart(pie_chart, use_container_width=True)
+    # --- Werven bewerken ---
+    st.subheader("📋 Huidige Werven")
+    if st.session_state["werven"]:
+        werven_df = pd.DataFrame(st.session_state["werven"])
+        edited_werven = st.data_editor(werven_df, num_rows="dynamic", use_container_width=True)
+        st.session_state["werven"] = edited_werven.to_dict("records")
     else:
-        st.info("🚘 Voeg een rit toe om resultaten te zien.")
+        st.info("Nog geen werven toegevoegd.")
+
+    # --- Selecteer werf om berekeningen te doen ---
+    if st.session_state["werven"]:
+        st.markdown("---")
+        st.subheader("📅 Selecteer Werf & Dag")
+        werf_namen = [w["Naam"] for w in st.session_state["werven"]]
+        selected_werf = st.selectbox("Kies een werf", werf_namen)
+
+        werf_info = next(w for w in st.session_state["werven"] if w["Naam"] == selected_werf)
+        start = werf_info["Begin"]
+        einde = werf_info["Einde"]
+
+        # Genereer datums
+        dagen = pd.date_range(start=start, end=einde).strftime("%Y-%m-%d").tolist()
+        selected_dag = st.selectbox("Kies een dag", dagen)
+
+        # --- Input voor berekening (zoals origineel tab1) ---
+        st.markdown("### 🌍 Berekening voor geselecteerde dag")
+        current_df = st.session_state["data"]
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            naam = st.text_input("👤 Naam")
+        with col2:
+            wagen = st.selectbox("🚘 Wagentype", current_df["Type activiteit"].unique())
+        with col3:
+            km = st.number_input("📏 Aantal kilometers", min_value=0, step=1)
+
+        if st.button("➕ Toevoegen voor deze dag"):
+            if naam and km > 0:
+                row = current_df[current_df["Type activiteit"] == wagen].iloc[0]
+                verbruik = row["Verbruik (liter of kWh / 100km)"]
+                ef = row["EF (kg CO2/eenheid)"]
+                co2 = ef * (verbruik / 100) * km
+
+                st.session_state["resultaten"].append({
+                    "Werf": selected_werf,
+                    "Datum": selected_dag,
+                    "Naam": naam,
+                    "Wagen": wagen,
+                    "Kilometers": km,
+                    "CO2 (kg)": round(co2, 2)
+                })
+            else:
+                st.warning("⚠️ Vul alle velden correct in.")
+
+        # --- Resultaten voor deze dag ---
+        dag_df = pd.DataFrame([r for r in st.session_state["resultaten"] if r["Werf"] == selected_werf and r["Datum"] == selected_dag])
+
+        if not dag_df.empty:
+            st.subheader(f"📊 Resultaten voor {selected_dag}")
+            st.dataframe(dag_df, use_container_width=True)
+
+            totaal_dag = dag_df["CO2 (kg)"].sum()
+            gemiddelde_dag = dag_df["CO2 (kg)"].mean()
+
+            col4, col5 = st.columns(2)
+            with col4:
+                st.metric("Totale CO₂ (dag)", f"{totaal_dag:.2f} kg")
+            with col5:
+                st.metric("Gemiddelde per rit (dag)", f"{gemiddelde_dag:.2f} kg")
+
+        else:
+            st.info("Geen data voor deze dag.")
+
+        # --- Totaal voor hele werf ---
+        werf_df = pd.DataFrame([r for r in st.session_state["resultaten"] if r["Werf"] == selected_werf])
+        if not werf_df.empty:
+            st.subheader(f"📦 Totaal voor werf '{selected_werf}'")
+            totaal_werf = werf_df["CO2 (kg)"].sum()
+            gemiddelde_werf = werf_df["CO2 (kg)"].mean()
+
+            col6, col7 = st.columns(2)
+            with col6:
+                st.metric("Totale CO₂ (werf)", f"{totaal_werf:.2f} kg")
+            with col7:
+                st.metric("Gemiddelde per rit (werf)", f"{gemiddelde_werf:.2f} kg")
+
+            # Optioneel: grafiek over dagen
+            grafiek_df = werf_df.groupby("Datum", as_index=False)["CO2 (kg)"].sum()
+            chart = alt.Chart(grafiek_df).mark_bar().encode(
+                x="Datum:T",
+                y="CO2 (kg):Q",
+                tooltip=["Datum", "CO2 (kg)"]
+            ).properties(title="CO₂ per dag")
+            st.altair_chart(chart, use_container_width=True)
+
+
 
 
 
